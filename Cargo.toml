@@ -1,0 +1,7 @@
+[package]
+name = "rustsourcebundler"
+version = "0.1.0"
+authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
+
+[dependencies]
+regex = "0.2"
