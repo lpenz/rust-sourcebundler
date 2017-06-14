@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/lpenz/rust-sourcebundler.svg?branch=master)](https://travis-ci.org/lpenz/rust-sourcebundler)
+
 # rust-sourcebundler
 
 Bundle the source code of a rust cargo crate in a single source file.
