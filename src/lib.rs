@@ -36,12 +36,14 @@ impl<'a> Bundler<'a> {
     }
 
 
-    pub fn run(&mut self) -> Result<(), io::Error> {
-        let mut o = try!(File::create(&self.bundle_filename));
-        try!(self.binrs(&mut o));
-        println!("rerun-if-changed={}",
-                 self.bundle_filename.to_str().unwrap());
-        Ok(())
+    pub fn run(&mut self) {
+        let mut o = File::create(&self.bundle_filename)
+            .expect(&format!("error creating {}", &self.bundle_filename.display()));
+        self.binrs(&mut o)
+            .expect(&format!("error creating bundle {} for {}",
+                            self.bundle_filename.display(),
+                            self.binrs_filename.display()));
+        println!("rerun-if-changed={}", self.bundle_filename.display());
     }
 
 
