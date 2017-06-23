@@ -23,6 +23,7 @@ pub struct Bundler<'a> {
     binrs_filename: &'a Path,
     bundle_filename: &'a Path,
     librs_filename: &'a Path,
+    _crate_name: &'a str,
 }
 
 
@@ -32,9 +33,13 @@ impl<'a> Bundler<'a> {
             binrs_filename: binrs_filename,
             bundle_filename: bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
+            _crate_name: "",
         }
     }
 
+    pub fn crate_name(&mut self, name: &'a str) {
+        self._crate_name = name;
+    }
 
     pub fn run(&mut self) {
         let mut o = File::create(&self.bundle_filename)
@@ -51,8 +56,12 @@ impl<'a> Bundler<'a> {
         let bin_fd = try!(File::open(self.binrs_filename));
         let mut bin_reader = BufReader::new(&bin_fd);
 
-        let extcrate_re = Regex::new(r"^extern crate codersstrikeback;$").unwrap();
-        let usecrate_re = Regex::new(r"^use codersstrikeback::(.*);$").unwrap();
+        let extcrate_re =
+            Regex::new(format!(r"^extern crate {};$", String::from(self._crate_name)).as_str())
+                .unwrap();
+        let usecrate_re = Regex::new(format!(r"^use {}::(.*);$", String::from(self._crate_name))
+                                         .as_str())
+                .unwrap();
 
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {

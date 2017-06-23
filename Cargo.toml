@@ -1,6 +1,6 @@
 [package]
 name = "rustsourcebundler"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
 
 [dependencies]
