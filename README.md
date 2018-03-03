@@ -38,3 +38,6 @@ fn main() {
     bundler.run();
 }
 ```
+
+You can use the code inside the *example* directory of this repository
+as a starting point.

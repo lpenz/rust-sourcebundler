@@ -1,0 +1,8 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
+build = "build.rs"
+
+[build-dependencies]
+rustsourcebundler = { git = "https://github.com/lpenz/rust-sourcebundler" }
