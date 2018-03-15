@@ -10,6 +10,7 @@ use std::path::Path;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::io;
+use std::collections::HashSet;
 
 extern crate regex;
 use regex::Regex;
@@ -22,6 +23,7 @@ pub struct Bundler<'a> {
     bundle_filename: &'a Path,
     librs_filename: &'a Path,
     _crate_name: &'a str,
+    skip_use: HashSet<String>,
 }
 
 impl<'a> Bundler<'a> {
@@ -31,6 +33,7 @@ impl<'a> Bundler<'a> {
             bundle_filename: bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
             _crate_name: "",
+            skip_use: HashSet::new(),
         }
     }
 
@@ -51,6 +54,9 @@ impl<'a> Bundler<'a> {
         println!("rerun-if-changed={}", self.bundle_filename.display());
     }
 
+    /// From the file that has the main() function, expand "extern
+    /// crate <_crate_name>" into lib.rs contents, and smartly skips
+    /// "use <_crate_name>::" lines.
     fn binrs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
         let bin_fd = try!(File::open(self.binrs_filename));
         let mut bin_reader = BufReader::new(&bin_fd);
@@ -68,7 +74,10 @@ impl<'a> Bundler<'a> {
             if extcrate_re.is_match(&line) {
                 try!(self.librs(o));
             } else if let Some(cap) = usecrate_re.captures(&line) {
-                try!(writeln!(&mut o, "use {};", cap.get(1).unwrap().as_str()));
+                let moduse = cap.get(1).unwrap().as_str();
+                if !self.skip_use.contains(moduse) {
+                    try!(writeln!(&mut o, "use {};", moduse));
+                }
             } else {
                 try!(writeln!(&mut o, "{}", line.chars().collect::<String>()));
             }
@@ -77,6 +86,7 @@ impl<'a> Bundler<'a> {
         Ok(())
     }
 
+    /// Expand lib.rs contents and "pub mod <>;" lines.
     fn librs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
         let lib_fd = File::open(self.librs_filename).expect("could not open lib.rs");
         let mut lib_reader = BufReader::new(&lib_fd);
@@ -87,7 +97,8 @@ impl<'a> Bundler<'a> {
         while lib_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
             if let Some(cap) = mod_re.captures(&line) {
-                try!(self.usemod(o, cap.get(1).unwrap().as_str()));
+                let modname = cap.get(1).unwrap().as_str();
+                try!(self.usemod(o, modname, modname));
             } else {
                 try!(writeln!(&mut o, "{}", line));
             }
@@ -96,7 +107,10 @@ impl<'a> Bundler<'a> {
         Ok(())
     }
 
-    fn usemod(&mut self, mut o: &mut File, mod_name: &str) -> Result<(), io::Error> {
+    /// Called to expand random .rs files from lib.rs. It recursivelly
+    /// expands further "pub mod <>;" lines and updates the list of
+    /// "use <>;" lines that have to be skipped.
+    fn usemod(&mut self, mut o: &mut File, mod_name: &str, mod_path: &str) -> Result<(), io::Error> {
         let mod_filename0 = format!("src/{}.rs", mod_name);
         let mod_filename = Path::new(&mod_filename0);
         let mod_fd =
@@ -108,11 +122,14 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
 
         try!(writeln!(&mut o, "pub mod {} {{", mod_name));
+        self.skip_use.insert(String::from(mod_path));
 
         while mod_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
             if let Some(cap) = mod_re.captures(&line) {
-                try!(self.usemod(o, cap.get(1).unwrap().as_str()));
+                let submodname = cap.get(1).unwrap().as_str();
+                let submodpath = format!("{}::{}", mod_path, submodname);
+                try!(self.usemod(o, submodname, submodpath.as_str()));
             } else {
                 try!(writeln!(&mut o, "{}", line));
             }
