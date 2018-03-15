@@ -14,9 +14,7 @@ use std::io;
 extern crate regex;
 use regex::Regex;
 
-
 const LIBRS_FILENAME: &'static str = "src/lib.rs";
-
 
 #[derive(Debug, Clone)]
 pub struct Bundler<'a> {
@@ -25,7 +23,6 @@ pub struct Bundler<'a> {
     librs_filename: &'a Path,
     _crate_name: &'a str,
 }
-
 
 impl<'a> Bundler<'a> {
     pub fn new(binrs_filename: &'a Path, bundle_filename: &'a Path) -> Bundler<'a> {
@@ -42,26 +39,28 @@ impl<'a> Bundler<'a> {
     }
 
     pub fn run(&mut self) {
-        let mut o = File::create(&self.bundle_filename)
-            .expect(&format!("error creating {}", &self.bundle_filename.display()));
-        self.binrs(&mut o)
-            .expect(&format!("error creating bundle {} for {}",
-                            self.bundle_filename.display(),
-                            self.binrs_filename.display()));
+        let mut o = File::create(&self.bundle_filename).expect(&format!(
+            "error creating {}",
+            &self.bundle_filename.display()
+        ));
+        self.binrs(&mut o).expect(&format!(
+            "error creating bundle {} for {}",
+            self.bundle_filename.display(),
+            self.binrs_filename.display()
+        ));
         println!("rerun-if-changed={}", self.bundle_filename.display());
     }
-
 
     fn binrs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
         let bin_fd = try!(File::open(self.binrs_filename));
         let mut bin_reader = BufReader::new(&bin_fd);
 
-        let extcrate_re =
-            Regex::new(format!(r"^extern crate {};$", String::from(self._crate_name)).as_str())
-                .unwrap();
-        let usecrate_re = Regex::new(format!(r"^use {}::(.*);$", String::from(self._crate_name))
-                                         .as_str())
-                .unwrap();
+        let extcrate_re = Regex::new(
+            format!(r"^extern crate {};$", String::from(self._crate_name)).as_str(),
+        ).unwrap();
+        let usecrate_re = Regex::new(
+            format!(r"^use {}::(.*);$", String::from(self._crate_name)).as_str(),
+        ).unwrap();
 
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
@@ -77,7 +76,6 @@ impl<'a> Bundler<'a> {
         }
         Ok(())
     }
-
 
     fn librs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
         let lib_fd = File::open(self.librs_filename).expect("could not open lib.rs");
@@ -98,12 +96,11 @@ impl<'a> Bundler<'a> {
         Ok(())
     }
 
-
     fn usemod(&mut self, mut o: &mut File, mod_name: &str) -> Result<(), io::Error> {
         let mod_filename0 = format!("src/{}.rs", mod_name);
         let mod_filename = Path::new(&mod_filename0);
-        let mod_fd = File::open(mod_filename)
-            .expect(&format!("could not open module {:?}", mod_filename));
+        let mod_fd =
+            File::open(mod_filename).expect(&format!("could not open module {:?}", mod_filename));
         let mut mod_reader = BufReader::new(&mod_fd);
 
         let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();
