@@ -43,3 +43,9 @@ fn main() {
 You can use the code inside the *example* directory of this repository
 as a starting point.
 
+
+## Similar Projects
+
+* [slava-sh/rust-bundler](https://github.com/slava-sh/rust-bundler)
+* [MarcosCosmos/cg-rust-bundler](https://github.com/MarcosCosmos/cg-rust-bundler)
+
