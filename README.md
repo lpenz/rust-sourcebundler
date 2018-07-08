@@ -14,7 +14,7 @@ you) and still keeping the cargo structure locally.
 
 Add the following snippet to your *Cargo.toml*:
 
-```
+```toml
 [package]
 (...)
 build = "build.rs"
@@ -25,7 +25,7 @@ rustsourcebundler = { git = "https://github.com/lpenz/rust-sourcebundler" }
 
 And create the file *build.rs* with the following:
 
-```
+```rust
 /*! Bundle mybin.rs and the crate libraries into singlefile.rs */
 
 use std::path::Path;
