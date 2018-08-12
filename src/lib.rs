@@ -22,6 +22,7 @@ pub struct Bundler<'a> {
     binrs_filename: &'a Path,
     bundle_filename: &'a Path,
     librs_filename: &'a Path,
+    comment_re: Regex,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
 }
@@ -32,6 +33,7 @@ impl<'a> Bundler<'a> {
             binrs_filename: binrs_filename,
             bundle_filename: bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
+            comment_re: Regex::new( r"^\s*//").unwrap(),
             _crate_name: "",
             skip_use: HashSet::new(),
         }
@@ -71,7 +73,8 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
-            if extcrate_re.is_match(&line) {
+            if self.comment_re.is_match(&line) {
+            } else if extcrate_re.is_match(&line) {
                 try!(self.librs(o));
             } else if let Some(cap) = usecrate_re.captures(&line) {
                 let moduse = cap.get(1).unwrap().as_str();
@@ -96,7 +99,8 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
         while lib_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
-            if let Some(cap) = mod_re.captures(&line) {
+            if self.comment_re.is_match(&line) {
+            } else if let Some(cap) = mod_re.captures(&line) {
                 let modname = cap.get(1).unwrap().as_str();
                 try!(self.usemod(o, modname, modname));
             } else {
@@ -131,7 +135,8 @@ impl<'a> Bundler<'a> {
 
         while mod_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
-            if let Some(cap) = mod_re.captures(&line) {
+            if self.comment_re.is_match(&line) {
+            } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap.get(1).unwrap().as_str();
                 let submodpath = format!("{}::{}", mod_path, submodname);
                 try!(self.usemod(o, submodname, submodpath.as_str()));
