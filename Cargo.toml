@@ -1,6 +1,6 @@
 [package]
 name = "rustsourcebundler"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
 description = "Bundle the source code of a rust cargo crate in a single source file"
 license = "Apache-2.0"
