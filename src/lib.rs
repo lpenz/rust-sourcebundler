@@ -102,7 +102,9 @@ impl<'a> Bundler<'a> {
             if self.comment_re.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let modname = cap.get(1).unwrap().as_str();
-                try!(self.usemod(o, modname, modname));
+                if modname != "tests" {
+                    try!(self.usemod(o, modname, modname));
+                }
             } else {
                 try!(writeln!(&mut o, "{}", line));
             }
@@ -138,8 +140,10 @@ impl<'a> Bundler<'a> {
             if self.comment_re.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap.get(1).unwrap().as_str();
-                let submodpath = format!("{}::{}", mod_path, submodname);
-                try!(self.usemod(o, submodname, submodpath.as_str()));
+                if submodname != "tests" {
+                    let submodpath = format!("{}::{}", mod_path, submodname);
+                    try!(self.usemod(o, submodname, submodpath.as_str()));
+                }
             } else {
                 try!(writeln!(&mut o, "{}", line));
             }
