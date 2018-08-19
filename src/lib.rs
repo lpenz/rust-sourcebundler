@@ -16,6 +16,7 @@ extern crate regex;
 use regex::Regex;
 
 const LIBRS_FILENAME: &'static str = "src/lib.rs";
+const MAINRS_FILENAME: &'static str = "src/main.rs";
 
 #[derive(Debug, Clone)]
 pub struct Bundler<'a> {
@@ -33,7 +34,18 @@ impl<'a> Bundler<'a> {
             binrs_filename: binrs_filename,
             bundle_filename: bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
-            comment_re: Regex::new( r"^\s*//").unwrap(),
+            comment_re: Regex::new(r"^\s*//").unwrap(),
+            _crate_name: "",
+            skip_use: HashSet::new(),
+        }
+    }
+
+    pub fn from_main(bundle_filename: &'a Path) -> Bundler<'a> {
+        Bundler {
+            binrs_filename: Path::new(MAINRS_FILENAME),
+            bundle_filename: bundle_filename,
+            librs_filename: Path::new(MAINRS_FILENAME),
+            comment_re: Regex::new(r"^\s*//").unwrap(),
             _crate_name: "",
             skip_use: HashSet::new(),
         }
