@@ -70,6 +70,8 @@ impl<'a> Bundler<'a> {
             format!(r"^use {}::(.*);$", String::from(self._crate_name)).as_str(),
         ).unwrap();
 
+        let mod_re = Regex::new(r"^\s*mod (.+);$").unwrap();
+
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
@@ -80,6 +82,11 @@ impl<'a> Bundler<'a> {
                 let moduse = cap.get(1).unwrap().as_str();
                 if !self.skip_use.contains(moduse) {
                     try!(writeln!(&mut o, "use {};", moduse));
+                }
+            } else if let Some(cap) = mod_re.captures(&line) {
+                let modname = cap.get(1).unwrap().as_str();
+                if modname != "tests" {
+                    try!(self.usemod(o, modname, modname));
                 }
             } else {
                 try!(writeln!(&mut o, "{}", line.chars().collect::<String>()));
