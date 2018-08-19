@@ -4,18 +4,19 @@ Use this library in your build.rs to create a single file with all the crate's s
 That's useful for programming exercise sites that take a single source file.
 */
 
+use std::collections::HashSet;
 use std::fs::File;
+use std::io;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::io;
-use std::collections::HashSet;
 
 extern crate regex;
 use regex::Regex;
 
 const LIBRS_FILENAME: &'static str = "src/lib.rs";
+const MAINRS_FILENAME: &'static str = "src/main.rs";
 
 #[derive(Debug, Clone)]
 pub struct Bundler<'a> {
@@ -33,7 +34,18 @@ impl<'a> Bundler<'a> {
             binrs_filename: binrs_filename,
             bundle_filename: bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
-            comment_re: Regex::new( r"^\s*//").unwrap(),
+            comment_re: Regex::new(r"^\s*//").unwrap(),
+            _crate_name: "",
+            skip_use: HashSet::new(),
+        }
+    }
+
+    pub fn from_main(bundle_filename: &'a Path) -> Bundler<'a> {
+        Bundler {
+            binrs_filename: Path::new(MAINRS_FILENAME),
+            bundle_filename: bundle_filename,
+            librs_filename: Path::new(MAINRS_FILENAME),
+            comment_re: Regex::new(r"^\s*//").unwrap(),
             _crate_name: "",
             skip_use: HashSet::new(),
         }
@@ -70,6 +82,8 @@ impl<'a> Bundler<'a> {
             format!(r"^use {}::(.*);$", String::from(self._crate_name)).as_str(),
         ).unwrap();
 
+        let mod_re = Regex::new(r"^\s*mod (.+);$").unwrap();
+
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
@@ -80,6 +94,11 @@ impl<'a> Bundler<'a> {
                 let moduse = cap.get(1).unwrap().as_str();
                 if !self.skip_use.contains(moduse) {
                     try!(writeln!(&mut o, "use {};", moduse));
+                }
+            } else if let Some(cap) = mod_re.captures(&line) {
+                let modname = cap.get(1).unwrap().as_str();
+                if modname != "tests" {
+                    try!(self.usemod(o, modname, modname));
                 }
             } else {
                 try!(writeln!(&mut o, "{}", line.chars().collect::<String>()));
@@ -116,16 +135,28 @@ impl<'a> Bundler<'a> {
     /// Called to expand random .rs files from lib.rs. It recursivelly
     /// expands further "pub mod <>;" lines and updates the list of
     /// "use <>;" lines that have to be skipped.
-    fn usemod(&mut self, mut o: &mut File, mod_name: &str, mod_path: &str) -> Result<(), io::Error> {
+    fn usemod(
+        &mut self,
+        mut o: &mut File,
+        mod_name: &str,
+        mod_path: &str,
+    ) -> Result<(), io::Error> {
         let mod_filenames0 = vec![
             format!("src/{}.rs", mod_name),
             format!("src/{}/mod.rs", mod_name),
-            ];
-        let mod_fd = mod_filenames0.iter().map(|fn0| {
-            let mod_filename = Path::new(&fn0);
-            File::open(mod_filename)
-        }).filter(|fd| fd.is_ok()).next();
-        assert!(mod_fd.is_some(), format!("could not find file for module {}", mod_name));
+        ];
+        let mod_fd = mod_filenames0
+            .iter()
+            .map(|fn0| {
+                let mod_filename = Path::new(&fn0);
+                File::open(mod_filename)
+            })
+            .filter(|fd| fd.is_ok())
+            .next();
+        assert!(
+            mod_fd.is_some(),
+            format!("could not find file for module {}", mod_name)
+        );
         let mut mod_reader = BufReader::new(mod_fd.unwrap().unwrap());
 
         let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();
