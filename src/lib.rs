@@ -4,13 +4,13 @@ Use this library in your build.rs to create a single file with all the crate's s
 That's useful for programming exercise sites that take a single source file.
 */
 
+use std::collections::HashSet;
 use std::fs::File;
+use std::io;
+use std::io::BufRead;
+use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
-use std::io::BufReader;
-use std::io::BufRead;
-use std::io;
-use std::collections::HashSet;
 
 extern crate regex;
 use regex::Regex;
@@ -135,16 +135,28 @@ impl<'a> Bundler<'a> {
     /// Called to expand random .rs files from lib.rs. It recursivelly
     /// expands further "pub mod <>;" lines and updates the list of
     /// "use <>;" lines that have to be skipped.
-    fn usemod(&mut self, mut o: &mut File, mod_name: &str, mod_path: &str) -> Result<(), io::Error> {
+    fn usemod(
+        &mut self,
+        mut o: &mut File,
+        mod_name: &str,
+        mod_path: &str,
+    ) -> Result<(), io::Error> {
         let mod_filenames0 = vec![
             format!("src/{}.rs", mod_name),
             format!("src/{}/mod.rs", mod_name),
-            ];
-        let mod_fd = mod_filenames0.iter().map(|fn0| {
-            let mod_filename = Path::new(&fn0);
-            File::open(mod_filename)
-        }).filter(|fd| fd.is_ok()).next();
-        assert!(mod_fd.is_some(), format!("could not find file for module {}", mod_name));
+        ];
+        let mod_fd = mod_filenames0
+            .iter()
+            .map(|fn0| {
+                let mod_filename = Path::new(&fn0);
+                File::open(mod_filename)
+            })
+            .filter(|fd| fd.is_ok())
+            .next();
+        assert!(
+            mod_fd.is_some(),
+            format!("could not find file for module {}", mod_name)
+        );
         let mut mod_reader = BufReader::new(mod_fd.unwrap().unwrap());
 
         let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();
