@@ -25,6 +25,7 @@ pub struct Bundler<'a> {
     comment_re: Regex,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
+    minify_re: Option<Regex>,
 }
 
 impl<'a> Bundler<'a> {
@@ -36,7 +37,16 @@ impl<'a> Bundler<'a> {
             comment_re: Regex::new(r"^\s*//").unwrap(),
             _crate_name: "",
             skip_use: HashSet::new(),
+            minify_re: None,
         }
+    }
+
+    pub fn minify_set(&mut self, enable: bool) {
+        self.minify_re = if enable {
+            Some(Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap())
+        } else {
+            None
+        };
     }
 
     pub fn crate_name(&mut self, name: &'a str) {
@@ -168,6 +178,14 @@ impl<'a> Bundler<'a> {
     }
 
     fn write_line(&self, mut o: &mut File, line: &str) -> Result<(), io::Error> {
-        writeln!(&mut o, "{}", line)
+        if let Some(ref minify_re) = self.minify_re {
+            writeln!(
+                &mut o,
+                "{}",
+                minify_re.replace_all(line, "$contents")
+            )
+        } else {
+            writeln!(&mut o, "{}", line)
+        }
     }
 }
