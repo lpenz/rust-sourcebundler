@@ -15,7 +15,7 @@ use std::path::Path;
 extern crate regex;
 use regex::Regex;
 
-const LIBRS_FILENAME: &'static str = "src/lib.rs";
+const LIBRS_FILENAME: &str = "src/lib.rs";
 
 #[derive(Debug, Clone)]
 pub struct Bundler<'a> {
@@ -31,8 +31,8 @@ pub struct Bundler<'a> {
 impl<'a> Bundler<'a> {
     pub fn new(binrs_filename: &'a Path, bundle_filename: &'a Path) -> Bundler<'a> {
         Bundler {
-            binrs_filename: binrs_filename,
-            bundle_filename: bundle_filename,
+            binrs_filename,
+            bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
             comment_re: Regex::new(r"^\s*//").unwrap(),
             _crate_name: "",
@@ -54,15 +54,15 @@ impl<'a> Bundler<'a> {
     }
 
     pub fn run(&mut self) {
-        let mut o = File::create(&self.bundle_filename).expect(&format!(
-            "error creating {}",
-            &self.bundle_filename.display()
-        ));
-        self.binrs(&mut o).expect(&format!(
-            "error creating bundle {} for {}",
-            self.bundle_filename.display(),
-            self.binrs_filename.display()
-        ));
+        let mut o = File::create(&self.bundle_filename)
+            .unwrap_or_else(|_| panic!("error creating {}", &self.bundle_filename.display()));
+        self.binrs(&mut o).unwrap_or_else(|_| {
+            panic!(
+                "error creating bundle {} for {}",
+                self.bundle_filename.display(),
+                self.binrs_filename.display()
+            )
+        });
         println!("rerun-if-changed={}", self.bundle_filename.display());
     }
 
@@ -142,8 +142,7 @@ impl<'a> Bundler<'a> {
                 let mod_filename = Path::new(&fn0);
                 File::open(mod_filename)
             })
-            .filter(|fd| fd.is_ok())
-            .next();
+            .find(|fd| fd.is_ok());
         assert!(
             mod_fd.is_some(),
             format!("could not find file for module {}", mod_name)
@@ -179,11 +178,7 @@ impl<'a> Bundler<'a> {
 
     fn write_line(&self, mut o: &mut File, line: &str) -> Result<(), io::Error> {
         if let Some(ref minify_re) = self.minify_re {
-            writeln!(
-                &mut o,
-                "{}",
-                minify_re.replace_all(line, "$contents")
-            )
+            writeln!(&mut o, "{}", minify_re.replace_all(line, "$contents"))
         } else {
             writeln!(&mut o, "{}", line)
         }
