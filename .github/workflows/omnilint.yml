@@ -1,0 +1,14 @@
+---
+name: omnilint
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron:  '0 6 1 * *'
+jobs:
+  omnilint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker://lpenz/omnilint:v0.2
+

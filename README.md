@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/lpenz/rust-sourcebundler.svg?branch=master)](https://travis-ci.org/lpenz/rust-sourcebundler)
+[![CI](https://github.com/lpenz/rust-sourcebundler/workflows/CI/badge.svg)](https://github.com/lpenz/rust-sourcebundler/actions)
 [![Crates.io](https://img.shields.io/crates/v/rustsourcebundler.svg)](https://crates.io/crates/rustsourcebundler)
 
 # rust-sourcebundler
