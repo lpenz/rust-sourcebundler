@@ -4,11 +4,10 @@
 //! See [README.md](https://github.com/slava-sh/rust-bundler/blob/master/README.md)
 extern crate cargo_metadata;
 extern crate quote;
-extern crate rustfmt;
 extern crate syn;
 
 use std::fs::File;
-use std::io::{Read, Sink};
+use std::io::Read;
 use std::mem;
 use std::path::Path;
 
@@ -42,7 +41,7 @@ pub fn bundle<P: AsRef<Path>>(package_path: P) -> String {
     }
     .visit_file_mut(&mut file);
     let code = file.into_tokens().to_string();
-    prettify(code)
+    code
 }
 
 fn target_is(target: &cargo_metadata::Target, target_kind: &str) -> bool {
@@ -194,13 +193,4 @@ pub fn read_file(path: &Path) -> Option<String> {
     let mut buf = String::new();
     File::open(path).ok()?.read_to_string(&mut buf).ok()?;
     Some(buf)
-}
-
-pub fn prettify(code: String) -> String {
-    let config = Default::default();
-    let out: Option<&mut Sink> = None;
-    let result =
-        rustfmt::format_input(rustfmt::Input::Text(code), &config, out).expect("rustfmt failed");
-    let code = &result.1.first().expect("rustfmt returned no code").1;
-    format!("{}", code)
 }

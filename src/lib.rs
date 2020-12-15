@@ -6,7 +6,6 @@ That's useful for programming exercise sites that take a single source file.
 
 extern crate cargo_metadata;
 extern crate quote;
-extern crate rustfmt;
 extern crate syn;
 
 use quote::ToTokens;
@@ -71,10 +70,10 @@ impl<'a> Bundler<'a> {
         }
         .visit_file_mut(&mut file);
         let code = file.into_tokens().to_string();
-        let codepretty = rust_bundler::prettify(code);
+        // let codepretty = rust_bundler::prettify(code);
         let mut o = File::create(&self.bundle_filename)
             .unwrap_or_else(|_| panic!("error creating {}", &self.bundle_filename.display()));
-        writeln!(&mut o, "{}", codepretty).expect("error writing file");
+        writeln!(&mut o, "{}", code).expect("error writing file");
         println!("rerun-if-changed={}", self.bundle_filename.display());
     }
 }
