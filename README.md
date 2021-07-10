@@ -1,5 +1,6 @@
-[![CI](https://github.com/lpenz/rust-sourcebundler/workflows/CI/badge.svg)](https://github.com/lpenz/rust-sourcebundler/actions)
-[![Crates.io](https://img.shields.io/crates/v/rustsourcebundler.svg)](https://crates.io/crates/rustsourcebundler)
+[![CI](https://github.com/lpenz/rust-sourcebundler/actions/workflows/ci.yml/badge.svg)](https://github.com/lpenz/rust-sourcebundler/actions/workflows/ci.yml)
+[![coveralls](https://coveralls.io/repos/github/lpenz/rust-sourcebundler/badge.svg?branch=main)](https://coveralls.io/github/lpenz/rust-sourcebundler?branch=main)
+[![crates.io](https://img.shields.io/crates/v/rustsourcebundler.svg)](https://crates.io/crates/rustsourcebundler)
 
 # rust-sourcebundler
 

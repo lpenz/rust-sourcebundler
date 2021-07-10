@@ -143,10 +143,7 @@ impl<'a> Bundler<'a> {
                 File::open(mod_filename)
             })
             .find(|fd| fd.is_ok());
-        assert!(
-            mod_fd.is_some(),
-            format!("could not find file for module {}", mod_name)
-        );
+        assert!(mod_fd.is_some(), "could not find file for module");
         let mut mod_reader = BufReader::new(mod_fd.unwrap().unwrap());
 
         let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();

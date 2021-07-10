@@ -1,11 +1,12 @@
 ---
-name: rust-ci
-on:
-  push:
-  pull_request:
-  schedule:
-    - cron:  '0 6 1 * *'
+name: CI
+on: [ push, pull_request ]
 jobs:
+  omnilint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker://lpenz/omnilint:v0.2
   # Rust actions from:
   # https://github.com/actions-rs/meta/blob/master/recipes/quickstart.md
   cargo-check:
@@ -22,15 +23,15 @@ jobs:
         with:
           command: check
   test-coverage:
-    name: cargo test with codecov
+    name: cargo test with coveralls
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1.0.7
         with:
           toolchain: nightly
           override: true
-      - uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1.0.3
         with:
           command: test
           args: --all-features --no-fail-fast
@@ -38,11 +39,12 @@ jobs:
           CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
           RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-      - uses: actions-rs/grcov@v0.1
-      - uses: codecov/codecov-action@v1
+      - id: coverage
+        uses: docker://lpenz/ghaction-grcov-express:0.2
+      - uses: coverallsapp/github-action@v1.1.2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ steps.coverage.outputs.report }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
   rustfmt:
     runs-on: ubuntu-latest
     steps:
