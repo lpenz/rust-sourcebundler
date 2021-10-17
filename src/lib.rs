@@ -115,7 +115,7 @@ impl<'a> Bundler<'a> {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let modname = cap.get(1).unwrap().as_str();
                 if modname != "tests" {
-                    self.usemod(o, modname, modname)?;
+                    self.usemod(o, modname, modname, modname)?;
                 }
             } else {
                 self.write_line(&mut o, &line)?;
@@ -133,10 +133,11 @@ impl<'a> Bundler<'a> {
         mut o: &mut File,
         mod_name: &str,
         mod_path: &str,
+        mod_import: &str,
     ) -> Result<(), io::Error> {
         let mod_filenames0 = vec![
-            format!("src/{}.rs", mod_name),
-            format!("src/{}/mod.rs", mod_name),
+            format!("src/{}.rs", mod_path),
+            format!("src/{}/mod.rs", mod_path),
         ];
         let mod_fd = mod_filenames0
             .iter()
@@ -153,7 +154,7 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
 
         writeln!(&mut o, "pub mod {} {{", mod_name)?;
-        self.skip_use.insert(String::from(mod_path));
+        self.skip_use.insert(String::from(mod_import));
 
         while mod_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
@@ -161,8 +162,9 @@ impl<'a> Bundler<'a> {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap.get(1).unwrap().as_str();
                 if submodname != "tests" {
-                    let submodpath = format!("{}::{}", mod_path, submodname);
-                    self.usemod(o, submodname, submodpath.as_str())?;
+                    let submodfile = format!("{}/{}", mod_path, submodname);
+                    let submodimport = format!("{}::{}", mod_import, submodname);
+                    self.usemod(o, submodname, submodfile.as_str(), submodimport.as_str())?;
                 }
             } else {
                 self.write_line(&mut o, &line)?;
