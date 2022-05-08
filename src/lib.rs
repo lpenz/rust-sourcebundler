@@ -69,7 +69,7 @@ impl<'a> Bundler<'a> {
             crate_name: self._crate_name,
         }
         .visit_file_mut(&mut file);
-        let code = file.into_tokens().to_string();
+        let code = file.into_token_stream().to_string();
         // let codepretty = rust_bundler::prettify(code);
         let mut o = File::create(&self.bundle_filename)
             .unwrap_or_else(|_| panic!("error creating {}", &self.bundle_filename.display()));

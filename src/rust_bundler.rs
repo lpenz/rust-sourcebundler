@@ -18,7 +18,9 @@ use syn::visit_mut::VisitMut;
 /// Creates a single-source-file version of a Cargo package.
 pub fn bundle<P: AsRef<Path>>(package_path: P) -> String {
     let manifest_path = package_path.as_ref().join("Cargo.toml");
-    let metadata = cargo_metadata::metadata_deps(Some(&manifest_path), false)
+    let metadata = cargo_metadata::MetadataCommand::new()
+        .manifest_path(&manifest_path)
+        .exec()
         .expect("failed to obtain cargo metadata");
     let targets = &metadata.packages[0].targets;
     let bins: Vec<_> = targets.iter().filter(|t| target_is(t, "bin")).collect();
@@ -33,14 +35,14 @@ pub fn bundle<P: AsRef<Path>>(package_path: P) -> String {
         .expect("lib.src_path has no parent");
     let crate_name = &lib.name;
     eprintln!("expanding binary {}", bin.src_path);
-    let code = read_file(&Path::new(&bin.src_path)).expect("failed to read binary target source");
+    let code = read_file(Path::new(&bin.src_path)).expect("failed to read binary target source");
     let mut file = syn::parse_file(&code).expect("failed to parse binary target source");
     Expander {
         base_path,
         crate_name,
     }
     .visit_file_mut(&mut file);
-    let code = file.into_tokens().to_string();
+    let code = file.into_token_stream().to_string();
     code
 }
 
@@ -171,7 +173,7 @@ fn is_extern_crate(item: &syn::Item, crate_name: &str) -> bool {
 
 fn path_starts_with(path: &syn::Path, segment: &str) -> bool {
     if let Some(el) = path.segments.first() {
-        if el.value().ident == segment {
+        if el.ident == segment {
             return true;
         }
     }
