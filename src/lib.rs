@@ -51,7 +51,7 @@ impl<'a> Bundler<'a> {
             binrs_filename,
             bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
-            comment_re: source_line_regex(r""),
+            comment_re: source_line_regex(r" "),
             warn_re: source_line_regex(r" #!\[warn\(.*"),
             _crate_name: "",
             skip_use: HashSet::new(),
