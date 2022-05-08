@@ -37,8 +37,8 @@ fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Regex {
             "^{}(?://.*)?$",
             source_regex
                 .as_ref()
-                .replace(" ", r"\s*")
                 .replace("  ", r"\s+")
+                .replace(" ", r"\s*")
         )
         .as_str(),
     )
