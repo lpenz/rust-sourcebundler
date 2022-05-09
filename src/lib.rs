@@ -94,7 +94,7 @@ impl<'a> Bundler<'a> {
                     writeln!(&mut o, "use {};", moduse)?;
                 }
             } else {
-                self.write_line(&mut o, &line)?;
+                self.write_line(o, &line)?;
             }
             line.clear();
         }
@@ -102,7 +102,7 @@ impl<'a> Bundler<'a> {
     }
 
     /// Expand lib.rs contents and "pub mod <>;" lines.
-    fn librs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
+    fn librs(&mut self, o: &mut File) -> Result<(), io::Error> {
         let lib_fd = File::open(self.librs_filename).expect("could not open lib.rs");
         let mut lib_reader = BufReader::new(&lib_fd);
 
@@ -118,7 +118,7 @@ impl<'a> Bundler<'a> {
                     self.usemod(o, modname, modname, modname)?;
                 }
             } else {
-                self.write_line(&mut o, &line)?;
+                self.write_line(o, &line)?;
             }
             line.clear(); // clear to reuse the buffer
         }
@@ -167,7 +167,7 @@ impl<'a> Bundler<'a> {
                     self.usemod(o, submodname, submodfile.as_str(), submodimport.as_str())?;
                 }
             } else {
-                self.write_line(&mut o, &line)?;
+                self.write_line(o, &line)?;
             }
             line.clear(); // clear to reuse the buffer
         }
