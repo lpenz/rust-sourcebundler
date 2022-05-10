@@ -29,14 +29,30 @@ pub struct Bundler<'a> {
     minify_re: Option<Regex>,
 }
 
+/// Defines a regex to match a line of rust source.
+/// Uses a shorthand where "  " = "\s+" and " " = "\s*"
+fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Regex {
+    Regex::new(
+        format!(
+            "^{}(?://.*)?$",
+            source_regex
+                .as_ref()
+                .replace("  ", r"\s+")
+                .replace(" ", r"\s*")
+        )
+        .as_str(),
+    )
+    .unwrap()
+}
+
 impl<'a> Bundler<'a> {
     pub fn new(binrs_filename: &'a Path, bundle_filename: &'a Path) -> Bundler<'a> {
         Bundler {
             binrs_filename,
             bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
-            comment_re: Regex::new(r"^\s*//").unwrap(),
-            warn_re: Regex::new(r"^\s*#!\[warn\(.*").unwrap(),
+            comment_re: source_line_regex(r" "),
+            warn_re: source_line_regex(r" #!\[warn\(.*"),
             _crate_name: "",
             skip_use: HashSet::new(),
             minify_re: None,
@@ -75,16 +91,17 @@ impl<'a> Bundler<'a> {
         let bin_fd = File::open(self.binrs_filename)?;
         let mut bin_reader = BufReader::new(&bin_fd);
 
-        let extcrate_re =
-            Regex::new(format!(r"^extern crate {};$", String::from(self._crate_name)).as_str())
-                .unwrap();
-        let usecrate_re =
-            Regex::new(format!(r"^use {}::(.*);$", String::from(self._crate_name)).as_str())
-                .unwrap();
+        let extcrate_re = source_line_regex(format!(
+            r" extern  crate  {} ; ",
+            String::from(self._crate_name)
+        ));
+        let usecrate_re = source_line_regex(
+            format!(r" use  {} :: (.*) ; ", String::from(self._crate_name)).as_str(),
+        );
 
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
-            line.pop();
+            line.truncate(line.trim_end().len());
             if self.comment_re.is_match(&line) || self.warn_re.is_match(&line) {
             } else if extcrate_re.is_match(&line) {
                 self.librs(o)?;
@@ -106,7 +123,7 @@ impl<'a> Bundler<'a> {
         let lib_fd = File::open(self.librs_filename).expect("could not open lib.rs");
         let mut lib_reader = BufReader::new(&lib_fd);
 
-        let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();
+        let mod_re = source_line_regex(r" pub  mod  (.+) ; ");
 
         let mut line = String::new();
         while lib_reader.read_line(&mut line).unwrap() > 0 {
@@ -149,7 +166,7 @@ impl<'a> Bundler<'a> {
         assert!(mod_fd.is_some(), "could not find file for module");
         let mut mod_reader = BufReader::new(mod_fd.unwrap().unwrap());
 
-        let mod_re = Regex::new(r"^\s*pub mod (.+);$").unwrap();
+        let mod_re = source_line_regex(r" pub  mod  (.+) ; ");
 
         let mut line = String::new();
 
@@ -157,7 +174,7 @@ impl<'a> Bundler<'a> {
         self.skip_use.insert(String::from(mod_import));
 
         while mod_reader.read_line(&mut line).unwrap() > 0 {
-            line.pop();
+            line.truncate(line.trim_end().len());
             if self.comment_re.is_match(&line) || self.warn_re.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap.get(1).unwrap().as_str();
