@@ -10,20 +10,24 @@ use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
 
+use lazy_static::lazy_static;
 use regex::Regex;
 
 const LIBRS_FILENAME: &str = "src/lib.rs";
+lazy_static! {
+    static ref COMMENT_RE: Regex = source_line_regex(r" ");
+    static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*");
+    static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
+}
 
 #[derive(Debug, Clone)]
 pub struct Bundler<'a> {
     binrs_filename: &'a Path,
     bundle_filename: &'a Path,
     librs_filename: &'a Path,
-    comment_re: Regex,
-    warn_re: Regex,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
-    minify_re: Option<Regex>,
+    minify: bool,
 }
 
 /// Defines a regex to match a line of rust source.
@@ -48,20 +52,14 @@ impl<'a> Bundler<'a> {
             binrs_filename,
             bundle_filename,
             librs_filename: Path::new(LIBRS_FILENAME),
-            comment_re: source_line_regex(r" "),
-            warn_re: source_line_regex(r" #!\[warn\(.*"),
             _crate_name: "",
             skip_use: HashSet::new(),
-            minify_re: None,
+            minify: false,
         }
     }
 
     pub fn minify_set(&mut self, enable: bool) {
-        self.minify_re = if enable {
-            Some(Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap())
-        } else {
-            None
-        };
+        self.minify = enable;
     }
 
     pub fn crate_name(&mut self, name: &'a str) {
@@ -99,7 +97,7 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
         while bin_reader.read_line(&mut line).unwrap() > 0 {
             line.truncate(line.trim_end().len());
-            if self.comment_re.is_match(&line) || self.warn_re.is_match(&line) {
+            if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if extcrate_re.is_match(&line) {
                 self.librs(o)?;
             } else if let Some(cap) = usecrate_re.captures(&line) {
@@ -125,7 +123,7 @@ impl<'a> Bundler<'a> {
         let mut line = String::new();
         while lib_reader.read_line(&mut line).unwrap() > 0 {
             line.pop();
-            if self.comment_re.is_match(&line) || self.warn_re.is_match(&line) {
+            if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let modname = cap.name("m").unwrap().as_str();
                 if modname != "tests" {
@@ -172,7 +170,7 @@ impl<'a> Bundler<'a> {
 
         while mod_reader.read_line(&mut line).unwrap() > 0 {
             line.truncate(line.trim_end().len());
-            if self.comment_re.is_match(&line) || self.warn_re.is_match(&line) {
+            if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap.name("m").unwrap().as_str();
                 if submodname != "tests" {
@@ -192,8 +190,8 @@ impl<'a> Bundler<'a> {
     }
 
     fn write_line(&self, mut o: &mut File, line: &str) -> Result<(), io::Error> {
-        if let Some(ref minify_re) = self.minify_re {
-            writeln!(&mut o, "{}", minify_re.replace_all(line, "$contents"))
+        if self.minify {
+            writeln!(&mut o, "{}", MINIFY_RE.replace_all(line, "$contents"))
         } else {
             writeln!(&mut o, "{}", line)
         }
