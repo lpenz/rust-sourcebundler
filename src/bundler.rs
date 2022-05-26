@@ -20,14 +20,29 @@ lazy_static! {
     static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Bundler<'a> {
     binrs_filename: &'a Path,
     bundle_filename: &'a Path,
+    bundle_file: Option<File>,
     librs_filename: &'a Path,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
     minify: bool,
+}
+
+impl<'a> Default for Bundler<'a> {
+    fn default() -> Self {
+        Bundler {
+            binrs_filename: Path::new(""),
+            bundle_filename: Path::new(""),
+            bundle_file: None,
+            librs_filename: Path::new(LIBRS_FILENAME),
+            _crate_name: "",
+            skip_use: HashSet::new(),
+            minify: false,
+        }
+    }
 }
 
 /// Defines a regex to match a line of rust source.
@@ -51,10 +66,15 @@ impl<'a> Bundler<'a> {
         Bundler {
             binrs_filename,
             bundle_filename,
-            librs_filename: Path::new(LIBRS_FILENAME),
-            _crate_name: "",
-            skip_use: HashSet::new(),
-            minify: false,
+            ..Default::default()
+        }
+    }
+
+    pub fn new_fd(binrs_filename: &'a Path, bundle_file: File) -> Bundler<'a> {
+        Bundler {
+            binrs_filename,
+            bundle_file: Some(bundle_file),
+            ..Default::default()
         }
     }
 
@@ -67,7 +87,13 @@ impl<'a> Bundler<'a> {
     }
 
     fn do_run(&mut self) -> Result<()> {
-        let mut o = File::create(&self.bundle_filename)?;
+        let mut o = {
+            if let Some(o) = self.bundle_file.take() {
+                o
+            } else {
+                File::create(&self.bundle_filename)?
+            }
+        };
         self.binrs(&mut o)?;
         println!("rerun-if-changed={}", self.bundle_filename.display());
         Ok(())
