@@ -4,19 +4,19 @@
 
 use std::collections::HashSet;
 use std::fs::File;
-use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
 use std::path::Path;
 
+use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 
 const LIBRS_FILENAME: &str = "src/lib.rs";
 lazy_static! {
-    static ref COMMENT_RE: Regex = source_line_regex(r" ");
-    static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*");
+    static ref COMMENT_RE: Regex = source_line_regex(r" ").unwrap();
+    static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*").unwrap();
     static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
 }
 
@@ -32,7 +32,7 @@ pub struct Bundler<'a> {
 
 /// Defines a regex to match a line of rust source.
 /// Uses a shorthand where "  " = "\s+" and " " = "\s*"
-fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Regex {
+fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Result<Regex> {
     Regex::new(
         format!(
             "^{}(?://.*)?$",
@@ -43,7 +43,7 @@ fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Regex {
         )
         .as_str(),
     )
-    .unwrap()
+    .map_err(|e| anyhow!(e))
 }
 
 impl<'a> Bundler<'a> {
@@ -66,42 +66,43 @@ impl<'a> Bundler<'a> {
         self._crate_name = name;
     }
 
-    pub fn run(&mut self) {
-        let mut o = File::create(&self.bundle_filename)
-            .unwrap_or_else(|_| panic!("error creating {}", &self.bundle_filename.display()));
-        self.binrs(&mut o).unwrap_or_else(|_| {
-            panic!(
-                "error creating bundle {} for {}",
-                self.bundle_filename.display(),
-                self.binrs_filename.display()
-            )
-        });
+    fn do_run(&mut self) -> Result<()> {
+        let mut o = File::create(&self.bundle_filename)?;
+        self.binrs(&mut o)?;
         println!("rerun-if-changed={}", self.bundle_filename.display());
+        Ok(())
+    }
+
+    pub fn run(&mut self) {
+        self.do_run().unwrap();
     }
 
     /// From the file that has the main() function, expand "extern
     /// crate <_crate_name>" into lib.rs contents, and smartly skips
     /// "use <_crate_name>::" lines.
-    fn binrs(&mut self, mut o: &mut File) -> Result<(), io::Error> {
+    fn binrs(&mut self, mut o: &mut File) -> Result<()> {
         let bin_fd = File::open(self.binrs_filename)?;
         let mut bin_reader = BufReader::new(&bin_fd);
 
         let extcrate_re = source_line_regex(format!(
             r" extern  crate  {} ; ",
             String::from(self._crate_name)
-        ));
+        ))?;
         let usecrate_re = source_line_regex(
             format!(r" use  {} :: (.*) ; ", String::from(self._crate_name)).as_str(),
-        );
+        )?;
 
         let mut line = String::new();
-        while bin_reader.read_line(&mut line).unwrap() > 0 {
+        while bin_reader.read_line(&mut line)? > 0 {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if extcrate_re.is_match(&line) {
                 self.librs(o)?;
             } else if let Some(cap) = usecrate_re.captures(&line) {
-                let moduse = cap.get(1).unwrap().as_str();
+                let moduse = cap
+                    .get(1)
+                    .ok_or_else(|| anyhow!("capture not found"))?
+                    .as_str();
                 if !self.skip_use.contains(moduse) {
                     writeln!(&mut o, "use {};", moduse)?;
                 }
@@ -114,18 +115,21 @@ impl<'a> Bundler<'a> {
     }
 
     /// Expand lib.rs contents and "pub mod <>;" lines.
-    fn librs(&mut self, o: &mut File) -> Result<(), io::Error> {
-        let lib_fd = File::open(self.librs_filename).expect("could not open lib.rs");
+    fn librs(&mut self, o: &mut File) -> Result<()> {
+        let lib_fd = File::open(self.librs_filename)?;
         let mut lib_reader = BufReader::new(&lib_fd);
 
-        let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ");
+        let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ")?;
 
         let mut line = String::new();
-        while lib_reader.read_line(&mut line).unwrap() > 0 {
+        while lib_reader.read_line(&mut line)? > 0 {
             line.pop();
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
-                let modname = cap.name("m").unwrap().as_str();
+                let modname = cap
+                    .name("m")
+                    .ok_or_else(|| anyhow!("capture not found"))?
+                    .as_str();
                 if modname != "tests" {
                     self.usemod(o, modname, modname, modname)?;
                 }
@@ -146,7 +150,7 @@ impl<'a> Bundler<'a> {
         mod_name: &str,
         mod_path: &str,
         mod_import: &str,
-    ) -> Result<(), io::Error> {
+    ) -> Result<()> {
         let mod_filenames0 = vec![
             format!("src/{}.rs", mod_path),
             format!("src/{}/mod.rs", mod_path),
@@ -157,22 +161,25 @@ impl<'a> Bundler<'a> {
                 let mod_filename = Path::new(&fn0);
                 File::open(mod_filename)
             })
-            .find(|fd| fd.is_ok());
-        assert!(mod_fd.is_some(), "could not find file for module");
-        let mut mod_reader = BufReader::new(mod_fd.unwrap().unwrap());
+            .find(|fd| fd.is_ok())
+            .ok_or_else(|| anyhow!("no mod file found"))??;
+        let mut mod_reader = BufReader::new(mod_fd);
 
-        let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ");
+        let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ")?;
 
         let mut line = String::new();
 
         writeln!(&mut o, "pub mod {} {{", mod_name)?;
         self.skip_use.insert(String::from(mod_import));
 
-        while mod_reader.read_line(&mut line).unwrap() > 0 {
+        while mod_reader.read_line(&mut line)? > 0 {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if let Some(cap) = mod_re.captures(&line) {
-                let submodname = cap.name("m").unwrap().as_str();
+                let submodname = cap
+                    .name("m")
+                    .ok_or_else(|| anyhow!("capture not found"))?
+                    .as_str();
                 if submodname != "tests" {
                     let submodfile = format!("{}/{}", mod_path, submodname);
                     let submodimport = format!("{}::{}", mod_import, submodname);
@@ -189,11 +196,12 @@ impl<'a> Bundler<'a> {
         Ok(())
     }
 
-    fn write_line(&self, mut o: &mut File, line: &str) -> Result<(), io::Error> {
+    fn write_line(&self, mut o: &mut File, line: &str) -> Result<()> {
         if self.minify {
             writeln!(&mut o, "{}", MINIFY_RE.replace_all(line, "$contents"))
         } else {
             writeln!(&mut o, "{}", line)
         }
+        .map_err(|e| anyhow!(e))
     }
 }
