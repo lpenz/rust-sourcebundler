@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
@@ -26,6 +26,7 @@ pub struct Bundler<'a> {
     bundle_filename: &'a Path,
     bundle_file: Option<File>,
     librs_filename: &'a Path,
+    basedir: PathBuf,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
     minify: bool,
@@ -38,6 +39,7 @@ impl<'a> Default for Bundler<'a> {
             bundle_filename: Path::new(""),
             bundle_file: None,
             librs_filename: Path::new(LIBRS_FILENAME),
+            basedir: PathBuf::default(),
             _crate_name: "",
             skip_use: HashSet::new(),
             minify: false,
@@ -94,6 +96,15 @@ impl<'a> Bundler<'a> {
                 File::create(&self.bundle_filename)?
             }
         };
+        self.basedir = PathBuf::from(
+            self.binrs_filename
+                .ancestors()
+                .find(|a| a.join("Cargo.toml").is_file())
+                .ok_or(anyhow!(
+                    "could not find Cargo.toml in ancestors of {:?}",
+                    self.binrs_filename
+                ))?,
+        );
         self.binrs(&mut o)?;
         println!("rerun-if-changed={}", self.bundle_filename.display());
         Ok(())
@@ -142,7 +153,7 @@ impl<'a> Bundler<'a> {
 
     /// Expand lib.rs contents and "pub mod <>;" lines.
     fn librs(&mut self, o: &mut File) -> Result<()> {
-        let lib_fd = File::open(self.librs_filename)?;
+        let lib_fd = File::open(self.basedir.join(self.librs_filename))?;
         let mut lib_reader = BufReader::new(&lib_fd);
 
         let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ")?;
@@ -184,7 +195,7 @@ impl<'a> Bundler<'a> {
         let mod_fd = mod_filenames0
             .iter()
             .map(|fn0| {
-                let mod_filename = Path::new(&fn0);
+                let mod_filename = self.basedir.join(&fn0);
                 File::open(mod_filename)
             })
             .find(|fd| fd.is_ok())
