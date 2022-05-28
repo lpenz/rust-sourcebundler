@@ -127,24 +127,15 @@ impl<'a> Bundler<'a> {
             r" extern  crate  {} ; ",
             String::from(self._crate_name)
         ))?;
-        let usecrate_re = source_line_regex(
-            format!(r" use  {} :: (.*) ; ", String::from(self._crate_name)).as_str(),
-        )?;
 
         let mut line = String::new();
         while bin_reader.read_line(&mut line)? > 0 {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if extcrate_re.is_match(&line) {
+                writeln!(&mut o, "pub mod {} {{", self._crate_name)?;
                 self.librs(o)?;
-            } else if let Some(cap) = usecrate_re.captures(&line) {
-                let moduse = cap
-                    .get(1)
-                    .ok_or_else(|| anyhow!("capture not found"))?
-                    .as_str();
-                if !self.skip_use.contains(moduse) {
-                    writeln!(&mut o, "use {};", moduse)?;
-                }
+                writeln!(&mut o, "}}")?;
             } else {
                 self.write_line(o, &line)?;
             }
