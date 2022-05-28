@@ -12,3 +12,4 @@ Cargo.lock
 # Files in example
 /example/target
 /example/src/bin/singlefile.rs
+singlefile.rs

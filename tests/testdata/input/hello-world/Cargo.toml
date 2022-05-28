@@ -1,0 +1,7 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+authors = ["Slava Shklyaev <slava@slava.sh>"]
+edition = "2018"
+
+[dependencies]

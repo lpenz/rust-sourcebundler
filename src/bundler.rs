@@ -100,10 +100,12 @@ impl<'a> Bundler<'a> {
             self.binrs_filename
                 .ancestors()
                 .find(|a| a.join("Cargo.toml").is_file())
-                .ok_or(anyhow!(
-                    "could not find Cargo.toml in ancestors of {:?}",
-                    self.binrs_filename
-                ))?,
+                .ok_or_else(|| {
+                    anyhow!(
+                        "could not find Cargo.toml in ancestors of {:?}",
+                        self.binrs_filename
+                    )
+                })?,
         );
         self.binrs(&mut o)?;
         println!("rerun-if-changed={}", self.bundle_filename.display());
