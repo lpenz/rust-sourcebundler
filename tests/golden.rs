@@ -11,12 +11,12 @@ const INPUT_DIR: &'static str = "tests/testdata/input";
 const OUTPUT_DIR: &'static str = "tests/testdata/output";
 
 #[test]
-fn hello_world() -> Result<()> {
+fn golden_hello_world() -> Result<()> {
     golden("hello-world")
 }
 
 #[test]
-fn basic() -> Result<()> {
+fn golden_basic() -> Result<()> {
     golden("basic")
 }
 
