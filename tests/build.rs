@@ -24,7 +24,21 @@ fn build_basic() -> Result<()> {
     build("basic")
 }
 
-fn build(testname: &str) -> Result<()> {
+fn build_original(testname: &str) -> Result<()> {
+    let input_path = Path::new(INPUT_DIR).join(testname);
+    let targetdir = TempDir::new()?;
+    let result = Command::new("cargo")
+        .arg("check")
+        .arg("-q")
+        .current_dir(input_path)
+        .env("CARGO_TARGET_DIR", targetdir.path())
+        .spawn()?
+        .wait()?;
+    assert!(result.success());
+    Ok(())
+}
+
+fn build_bundle(testname: &str) -> Result<()> {
     // Create the build directory, with an src subdir:
     let input_path_str = format!("{}/{}/src/main.rs", INPUT_DIR, testname);
     let input_path = Path::new(&input_path_str);
@@ -52,4 +66,9 @@ fn build(testname: &str) -> Result<()> {
         .wait()?;
     assert!(result.success());
     Ok(())
+}
+
+fn build(testname: &str) -> Result<()> {
+    build_original(testname)?;
+    build_bundle(testname)
 }
