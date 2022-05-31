@@ -19,7 +19,7 @@ pub struct Cli {
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-    let mut bundler = if let Some(ref output) = cli.output {
+    let bundler = if let Some(ref output) = cli.output {
         Bundler::new(&cli.main_rs, output)
     } else {
         Bundler::new_fd(&cli.main_rs, Box::new(std::io::stdout()))

@@ -23,28 +23,12 @@ lazy_static! {
 
 pub struct Bundler<'a> {
     binrs_filename: &'a Path,
-    bundle_filename: &'a Path,
-    bundle_file: Option<Box<dyn Write>>,
-    librs_filename: &'a Path,
+    bundle_filename: Option<&'a Path>,
+    bundle_file: Box<dyn Write>,
     basedir: PathBuf,
     _crate_name: &'a str,
     skip_use: HashSet<String>,
     minify: bool,
-}
-
-impl<'a> Default for Bundler<'a> {
-    fn default() -> Self {
-        Bundler {
-            binrs_filename: Path::new(""),
-            bundle_filename: Path::new(""),
-            bundle_file: None,
-            librs_filename: Path::new(LIBRS_FILENAME),
-            basedir: PathBuf::default(),
-            _crate_name: "",
-            skip_use: HashSet::new(),
-            minify: false,
-        }
-    }
 }
 
 /// Defines a regex to match a line of rust source.
@@ -65,18 +49,23 @@ fn source_line_regex<S: AsRef<str>>(source_regex: S) -> Result<Regex> {
 
 impl<'a> Bundler<'a> {
     pub fn new(binrs_filename: &'a Path, bundle_filename: &'a Path) -> Bundler<'a> {
-        Bundler {
+        let mut bundler = Self::new_fd(
             binrs_filename,
-            bundle_filename,
-            ..Default::default()
-        }
+            Box::new(BufWriter::new(File::create(&bundle_filename).unwrap())),
+        );
+        bundler.bundle_filename = Some(bundle_filename);
+        bundler
     }
 
     pub fn new_fd(binrs_filename: &'a Path, bundle_file: Box<dyn Write>) -> Bundler<'a> {
         Bundler {
             binrs_filename,
-            bundle_file: Some(bundle_file),
-            ..Default::default()
+            bundle_filename: None,
+            bundle_file,
+            basedir: PathBuf::default(),
+            _crate_name: "",
+            skip_use: HashSet::new(),
+            minify: false,
         }
     }
 
@@ -89,13 +78,6 @@ impl<'a> Bundler<'a> {
     }
 
     fn do_run(&mut self) -> Result<()> {
-        let mut o = {
-            if let Some(o) = self.bundle_file.take() {
-                o
-            } else {
-                Box::new(BufWriter::new(File::create(&self.bundle_filename)?))
-            }
-        };
         self.basedir = PathBuf::from(
             self.binrs_filename
                 .ancestors()
@@ -107,19 +89,22 @@ impl<'a> Bundler<'a> {
                     )
                 })?,
         );
-        self.binrs(&mut o)?;
-        println!("rerun-if-changed={}", self.bundle_filename.display());
+        self.binrs()?;
+        if let Some(bundle_filename) = self.bundle_filename {
+            println!("rerun-if-changed={}", bundle_filename.display());
+        }
+        self.bundle_file.flush()?;
         Ok(())
     }
 
-    pub fn run(&mut self) {
+    pub fn run(mut self) {
         self.do_run().unwrap();
     }
 
     /// From the file that has the main() function, expand "extern
     /// crate <_crate_name>" into lib.rs contents, and smartly skips
     /// "use <_crate_name>::" lines.
-    fn binrs(&mut self, mut o: &mut Box<dyn Write>) -> Result<()> {
+    fn binrs(&mut self) -> Result<()> {
         let bin_fd = File::open(self.binrs_filename)?;
         let mut bin_reader = BufReader::new(&bin_fd);
 
@@ -133,11 +118,11 @@ impl<'a> Bundler<'a> {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
             } else if extcrate_re.is_match(&line) {
-                writeln!(&mut o, "pub mod {} {{", self._crate_name)?;
-                self.librs(o)?;
-                writeln!(&mut o, "}}")?;
+                writeln!(self.bundle_file, "pub mod {} {{", self._crate_name)?;
+                self.librs()?;
+                writeln!(self.bundle_file, "}}")?;
             } else {
-                self.write_line(o, &line)?;
+                self.write_line(&line)?;
             }
             line.clear();
         }
@@ -145,8 +130,8 @@ impl<'a> Bundler<'a> {
     }
 
     /// Expand lib.rs contents and "pub mod <>;" lines.
-    fn librs(&mut self, o: &mut Box<dyn Write>) -> Result<()> {
-        let lib_fd = File::open(self.basedir.join(self.librs_filename))?;
+    fn librs(&mut self) -> Result<()> {
+        let lib_fd = File::open(self.basedir.join(LIBRS_FILENAME))?;
         let mut lib_reader = BufReader::new(&lib_fd);
 
         let mod_re = source_line_regex(r" (pub  )?mod  (?P<m>.+) ; ")?;
@@ -161,10 +146,10 @@ impl<'a> Bundler<'a> {
                     .ok_or_else(|| anyhow!("capture not found"))?
                     .as_str();
                 if modname != "tests" {
-                    self.usemod(o, modname, modname, modname)?;
+                    self.usemod(modname, modname, modname)?;
                 }
             } else {
-                self.write_line(o, &line)?;
+                self.write_line(&line)?;
             }
             line.clear(); // clear to reuse the buffer
         }
@@ -174,13 +159,7 @@ impl<'a> Bundler<'a> {
     /// Called to expand random .rs files from lib.rs. It recursivelly
     /// expands further "pub mod <>;" lines and updates the list of
     /// "use <>;" lines that have to be skipped.
-    fn usemod(
-        &mut self,
-        mut o: &mut Box<dyn Write>,
-        mod_name: &str,
-        mod_path: &str,
-        mod_import: &str,
-    ) -> Result<()> {
+    fn usemod(&mut self, mod_name: &str, mod_path: &str, mod_import: &str) -> Result<()> {
         let mod_filenames0 = vec![
             format!("src/{}.rs", mod_path),
             format!("src/{}/mod.rs", mod_path),
@@ -199,7 +178,7 @@ impl<'a> Bundler<'a> {
 
         let mut line = String::new();
 
-        writeln!(&mut o, "pub mod {} {{", mod_name)?;
+        writeln!(self.bundle_file, "pub mod {} {{", mod_name)?;
         self.skip_use.insert(String::from(mod_import));
 
         while mod_reader.read_line(&mut line)? > 0 {
@@ -213,24 +192,28 @@ impl<'a> Bundler<'a> {
                 if submodname != "tests" {
                     let submodfile = format!("{}/{}", mod_path, submodname);
                     let submodimport = format!("{}::{}", mod_import, submodname);
-                    self.usemod(o, submodname, submodfile.as_str(), submodimport.as_str())?;
+                    self.usemod(submodname, submodfile.as_str(), submodimport.as_str())?;
                 }
             } else {
-                self.write_line(o, &line)?;
+                self.write_line(&line)?;
             }
             line.clear(); // clear to reuse the buffer
         }
 
-        writeln!(&mut o, "}}")?;
+        writeln!(self.bundle_file, "}}")?;
 
         Ok(())
     }
 
-    fn write_line(&self, mut o: &mut Box<dyn Write>, line: &str) -> Result<()> {
+    fn write_line(&mut self, line: &str) -> Result<()> {
         if self.minify {
-            writeln!(&mut o, "{}", MINIFY_RE.replace_all(line, "$contents"))
+            writeln!(
+                self.bundle_file,
+                "{}",
+                MINIFY_RE.replace_all(line, "$contents")
+            )
         } else {
-            writeln!(&mut o, "{}", line)
+            writeln!(self.bundle_file, "{}", line)
         }
         .map_err(|e| anyhow!(e))
     }
