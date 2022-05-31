@@ -15,13 +15,23 @@ use rustsourcebundler::Bundler;
 const INPUT_DIR: &'static str = "tests/testdata/input";
 
 #[test]
-fn build_hello_world() -> Result<()> {
-    build("hello-world")
+fn build_original_hello_world() -> Result<()> {
+    build_original("hello-world")
 }
 
 #[test]
-fn build_basic() -> Result<()> {
-    build("basic")
+fn build_bundle_hello_world() -> Result<()> {
+    build_bundle("hello-world")
+}
+
+#[test]
+fn build_original_basic() -> Result<()> {
+    build_original("basic")
+}
+
+#[test]
+fn build_bundle_basic() -> Result<()> {
+    build_bundle("basic")
 }
 
 fn build_original(testname: &str) -> Result<()> {
@@ -66,9 +76,4 @@ fn build_bundle(testname: &str) -> Result<()> {
         .wait()?;
     assert!(result.success());
     Ok(())
-}
-
-fn build(testname: &str) -> Result<()> {
-    build_original(testname)?;
-    build_bundle(testname)
 }
