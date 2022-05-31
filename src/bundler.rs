@@ -11,6 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
+use cargo_toml;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -26,7 +27,7 @@ pub struct Bundler<'a> {
     bundle_filename: Option<&'a Path>,
     bundle_file: Box<dyn Write>,
     basedir: PathBuf,
-    _crate_name: &'a str,
+    _crate_name: String,
     skip_use: HashSet<String>,
     minify: bool,
 }
@@ -63,7 +64,7 @@ impl<'a> Bundler<'a> {
             bundle_filename: None,
             bundle_file,
             basedir: PathBuf::default(),
-            _crate_name: "",
+            _crate_name: String::from(""),
             skip_use: HashSet::new(),
             minify: false,
         }
@@ -74,7 +75,7 @@ impl<'a> Bundler<'a> {
     }
 
     pub fn crate_name(&mut self, name: &'a str) {
-        self._crate_name = name;
+        self._crate_name = String::from(name);
     }
 
     fn do_run(&mut self) -> Result<()> {
@@ -89,6 +90,12 @@ impl<'a> Bundler<'a> {
                     )
                 })?,
         );
+        let cargo_filename = self.basedir.join("Cargo.toml");
+        let cargo = cargo_toml::Manifest::from_path(&cargo_filename)?;
+        self._crate_name = cargo
+            .package
+            .ok_or_else(|| anyhow!("Could not get crate name from {}", cargo_filename.display()))?
+            .name;
         self.binrs()?;
         if let Some(bundle_filename) = self.bundle_filename {
             println!("rerun-if-changed={}", bundle_filename.display());
@@ -108,10 +115,7 @@ impl<'a> Bundler<'a> {
         let bin_fd = File::open(self.binrs_filename)?;
         let mut bin_reader = BufReader::new(&bin_fd);
 
-        let extcrate_re = source_line_regex(format!(
-            r" extern  crate  {} ; ",
-            String::from(self._crate_name)
-        ))?;
+        let extcrate_re = source_line_regex(format!(r" extern  crate  {} ; ", self._crate_name))?;
 
         let mut line = String::new();
         while bin_reader.read_line(&mut line)? > 0 {
