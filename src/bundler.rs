@@ -6,6 +6,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -20,11 +21,10 @@ lazy_static! {
     static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
 }
 
-#[derive(Debug)]
 pub struct Bundler<'a> {
     binrs_filename: &'a Path,
     bundle_filename: &'a Path,
-    bundle_file: Option<File>,
+    bundle_file: Option<Box<dyn Write>>,
     librs_filename: &'a Path,
     basedir: PathBuf,
     _crate_name: &'a str,
@@ -72,7 +72,7 @@ impl<'a> Bundler<'a> {
         }
     }
 
-    pub fn new_fd(binrs_filename: &'a Path, bundle_file: File) -> Bundler<'a> {
+    pub fn new_fd(binrs_filename: &'a Path, bundle_file: Box<dyn Write>) -> Bundler<'a> {
         Bundler {
             binrs_filename,
             bundle_file: Some(bundle_file),
@@ -93,7 +93,7 @@ impl<'a> Bundler<'a> {
             if let Some(o) = self.bundle_file.take() {
                 o
             } else {
-                File::create(&self.bundle_filename)?
+                Box::new(BufWriter::new(File::create(&self.bundle_filename)?))
             }
         };
         self.basedir = PathBuf::from(
@@ -119,7 +119,7 @@ impl<'a> Bundler<'a> {
     /// From the file that has the main() function, expand "extern
     /// crate <_crate_name>" into lib.rs contents, and smartly skips
     /// "use <_crate_name>::" lines.
-    fn binrs(&mut self, mut o: &mut File) -> Result<()> {
+    fn binrs(&mut self, mut o: &mut Box<dyn Write>) -> Result<()> {
         let bin_fd = File::open(self.binrs_filename)?;
         let mut bin_reader = BufReader::new(&bin_fd);
 
@@ -145,7 +145,7 @@ impl<'a> Bundler<'a> {
     }
 
     /// Expand lib.rs contents and "pub mod <>;" lines.
-    fn librs(&mut self, o: &mut File) -> Result<()> {
+    fn librs(&mut self, o: &mut Box<dyn Write>) -> Result<()> {
         let lib_fd = File::open(self.basedir.join(self.librs_filename))?;
         let mut lib_reader = BufReader::new(&lib_fd);
 
@@ -176,7 +176,7 @@ impl<'a> Bundler<'a> {
     /// "use <>;" lines that have to be skipped.
     fn usemod(
         &mut self,
-        mut o: &mut File,
+        mut o: &mut Box<dyn Write>,
         mod_name: &str,
         mod_path: &str,
         mod_import: &str,
@@ -226,7 +226,7 @@ impl<'a> Bundler<'a> {
         Ok(())
     }
 
-    fn write_line(&self, mut o: &mut File, line: &str) -> Result<()> {
+    fn write_line(&self, mut o: &mut Box<dyn Write>, line: &str) -> Result<()> {
         if self.minify {
             writeln!(&mut o, "{}", MINIFY_RE.replace_all(line, "$contents"))
         } else {

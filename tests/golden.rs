@@ -26,7 +26,7 @@ fn golden(testname: &str) -> Result<()> {
     let output_name = Path::new(testname).with_extension("rs");
     let mut mint = Mint::new(OUTPUT_DIR);
     let golden = mint.new_goldenfile(&output_name)?;
-    let mut bundler = Bundler::new_fd(&input_path, golden);
+    let mut bundler = Bundler::new_fd(&input_path, Box::new(golden));
     bundler.crate_name(testname);
     bundler.run();
     Ok(())
