@@ -12,7 +12,7 @@ pub fn hello_world2() {
 }
 }
 }
-use usecrate::submod2::hello_world2;
+use ::usecrate::submod2::hello_world2;
 fn main() {
     hello_world2();
 }
