@@ -34,6 +34,16 @@ fn build_bundle_basic() -> Result<()> {
     build_bundle("basic")
 }
 
+#[test]
+fn build_original_usecrate() -> Result<()> {
+    build_original("usecrate")
+}
+
+#[test]
+fn build_bundle_usecrate() -> Result<()> {
+    build_bundle("usecrate")
+}
+
 fn build_original(testname: &str) -> Result<()> {
     let input_path = Path::new(INPUT_DIR).join(testname);
     let targetdir = TempDir::new()?;

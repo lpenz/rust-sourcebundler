@@ -19,6 +19,7 @@ const LIBRS_FILENAME: &str = "src/lib.rs";
 lazy_static! {
     static ref COMMENT_RE: Regex = source_line_regex(r" ").unwrap();
     static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*").unwrap();
+    static ref USECRATE_RE: Regex = source_line_regex(r" use  crate::(?P<submod>.*);$").unwrap();
     static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
 }
 
@@ -150,7 +151,7 @@ impl<'a> Bundler<'a> {
                     .ok_or_else(|| anyhow!("capture not found"))?
                     .as_str();
                 if modname != "tests" {
-                    self.usemod(modname, modname, modname)?;
+                    self.usemod(modname, modname, modname, 1)?;
                 }
             } else {
                 self.write_line(&line)?;
@@ -163,7 +164,13 @@ impl<'a> Bundler<'a> {
     /// Called to expand random .rs files from lib.rs. It recursivelly
     /// expands further "pub mod <>;" lines and updates the list of
     /// "use <>;" lines that have to be skipped.
-    fn usemod(&mut self, mod_name: &str, mod_path: &str, mod_import: &str) -> Result<()> {
+    fn usemod(
+        &mut self,
+        mod_name: &str,
+        mod_path: &str,
+        mod_import: &str,
+        lvl: usize,
+    ) -> Result<()> {
         let mod_filenames0 = vec![
             format!("src/{}.rs", mod_path),
             format!("src/{}/mod.rs", mod_path),
@@ -188,6 +195,16 @@ impl<'a> Bundler<'a> {
         while mod_reader.read_line(&mut line)? > 0 {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
+            } else if let Some(cap) = USECRATE_RE.captures(&line) {
+                let submodname = cap
+                    .name("submod")
+                    .ok_or_else(|| anyhow!("capture not found"))?
+                    .as_str();
+                write!(self.bundle_file, "use ")?;
+                for _ in 0..lvl {
+                    write!(self.bundle_file, "super::")?;
+                }
+                writeln!(self.bundle_file, "{};", submodname)?;
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap
                     .name("m")
@@ -196,7 +213,12 @@ impl<'a> Bundler<'a> {
                 if submodname != "tests" {
                     let submodfile = format!("{}/{}", mod_path, submodname);
                     let submodimport = format!("{}::{}", mod_import, submodname);
-                    self.usemod(submodname, submodfile.as_str(), submodimport.as_str())?;
+                    self.usemod(
+                        submodname,
+                        submodfile.as_str(),
+                        submodimport.as_str(),
+                        lvl + 1,
+                    )?;
                 }
             } else {
                 self.write_line(&line)?;

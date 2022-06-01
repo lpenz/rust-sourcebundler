@@ -20,6 +20,11 @@ fn golden_basic() -> Result<()> {
     golden("basic")
 }
 
+#[test]
+fn golden_usecrate() -> Result<()> {
+    golden("usecrate")
+}
+
 fn golden(testname: &str) -> Result<()> {
     let input_path_str = format!("{}/{}/src/main.rs", INPUT_DIR, testname);
     let input_path = Path::new(&input_path_str);
