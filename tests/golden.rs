@@ -25,6 +25,11 @@ fn golden_usecrate() -> Result<()> {
     golden("usecrate")
 }
 
+#[test]
+fn golden_complicated() -> Result<()> {
+    golden("complicated")
+}
+
 fn golden(testname: &str) -> Result<()> {
     let input_path_str = format!("{}/{}/src/main.rs", INPUT_DIR, testname);
     let input_path = Path::new(&input_path_str);

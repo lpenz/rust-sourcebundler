@@ -44,6 +44,16 @@ fn build_bundle_usecrate() -> Result<()> {
     build_bundle("usecrate")
 }
 
+#[test]
+fn build_original_complicated() -> Result<()> {
+    build_original("complicated")
+}
+
+#[test]
+fn build_bundle_complicated() -> Result<()> {
+    build_bundle("complicated")
+}
+
 fn build_original(testname: &str) -> Result<()> {
     let input_path = Path::new(INPUT_DIR).join(testname);
     let targetdir = TempDir::new()?;
@@ -66,8 +76,7 @@ fn build_bundle(testname: &str) -> Result<()> {
     fs::create_dir_all(tempdir.path().join("src"))?;
     // Bundle the test input there:
     let output_path = tempdir.path().join("src/main.rs");
-    let mut bundler = Bundler::new(&input_path, &output_path);
-    bundler.crate_name(testname);
+    let bundler = Bundler::new(&input_path, &output_path);
     bundler.run();
     // Create Cargo.toml:
     let mut fd = fs::File::create(tempdir.path().join("Cargo.toml"))?;
