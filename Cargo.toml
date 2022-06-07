@@ -8,4 +8,4 @@ homepage = "https://github.com/lpenz/rust-sourcebundler"
 repository = "https://github.com/lpenz/rust-sourcebundler.git"
 
 [dependencies]
-regex = "0.2"
+regex = "1.5.6"
