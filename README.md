@@ -48,5 +48,6 @@ as a starting point.
 ## Similar Projects
 
 * [slava-sh/rust-bundler](https://github.com/slava-sh/rust-bundler)
-* [MarcosCosmos/cg-rust-bundler](https://github.com/MarcosCosmos/cg-rust-bundler)
+* [Endle/rust-bundler-cp](https://github.com/Endle/rust-bundler-cp)
+* [MarcosCosmos/cg-rust-bundler](https://github.com/MarcosCosmos/cg-rust-bundler) written in python
 
