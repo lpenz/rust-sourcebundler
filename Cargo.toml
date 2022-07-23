@@ -6,6 +6,7 @@ description = "Bundle the source code of a rust cargo crate in a single source f
 license = "MIT"
 homepage = "https://github.com/lpenz/rust-sourcebundler"
 repository = "https://github.com/lpenz/rust-sourcebundler.git"
+edition = "2018"
 
 [dependencies]
 regex = "1.5.6"
