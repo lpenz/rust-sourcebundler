@@ -27,17 +27,18 @@ rustsourcebundler = { git = "https://github.com/lpenz/rust-sourcebundler" }
 And create the file *build.rs* with the following:
 
 ```rust
-/*! Bundle mybin.rs and the crate libraries into singlefile.rs */
+//! Bundle mybin.rs and the crate libraries into singlefile.rs
 
 use std::path::Path;
 extern crate rustsourcebundler;
 use rustsourcebundler::Bundler;
 
-fn main() {
-    let mut bundler: Bundler = Bundler::new(Path::new("src/bin/csbk.rs"),
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut bundler: Bundler = Bundler::new(Path::new("src/bin/mybin.rs"),
                                             Path::new("src/bin/singlefile.rs"));
     bundler.crate_name("<crate name>");
-    bundler.run();
+    bundler.run()?;
+    Ok(())
 }
 ```
 
@@ -49,5 +50,6 @@ as a starting point.
 
 * [slava-sh/rust-bundler](https://github.com/slava-sh/rust-bundler)
 * [Endle/rust-bundler-cp](https://github.com/Endle/rust-bundler-cp)
-* [MarcosCosmos/cg-rust-bundler](https://github.com/MarcosCosmos/cg-rust-bundler) written in python
+* [MarcosCosmos/cg-rust-bundler](https://github.com/MarcosCosmos/cg-rust-bundler)
+  written in python
 
