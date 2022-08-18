@@ -1,78 +1,16 @@
 ---
 name: CI
-on: [ push, pull_request ]
+on: [ workflow_dispatch, push, pull_request ]
 jobs:
   omnilint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: docker://lpenz/omnilint:v0.2
-  # Rust actions from:
-  # https://github.com/actions-rs/meta/blob/master/recipes/quickstart.md
-  cargo-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-  test-coverage:
-    name: cargo test with coveralls
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - id: coverage
-        uses: docker://lpenz/ghaction-rust-coverage:0.8.0
-      - uses: coverallsapp/github-action@v1.1.2
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
-  rustfmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-  clippy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
-  publish-crate:
-    needs: [ omnilint, cargo-check, test-coverage, rustfmt, clippy ]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - id: version
-        uses: docker://lpenz/ghaction-version-gen:0.8.0
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - uses: katyo/publish-crates@v1
-        if: steps.version.outputs.version_tagged != ''
-        with:
-          registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
+      - uses: actions/checkout@v3.0.2
+      - uses: docker://lpenz/omnilint:0.5
+  rust:
+    uses: lpenz/ghworkflow-rust/.github/workflows/rust.yml@v0.8.0
+    with:
+      coveralls: true
+      publish_cratesio: true
+    secrets:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
