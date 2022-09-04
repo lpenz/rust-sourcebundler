@@ -1,6 +1,6 @@
 [package]
 name = "rustsourcebundler"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
 description = "Bundle the source code of a rust cargo crate in a single source file"
 license = "MIT"
@@ -8,7 +8,7 @@ homepage = "https://github.com/lpenz/rust-sourcebundler"
 repository = "https://github.com/lpenz/rust-sourcebundler.git"
 edition = "2018"
 categories = ["command-line-utilities"]
-keywords = ["single-file", "bundle", "merge", "expand", "cli", "source"]
+keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
 lazy_static = "1.4.0"
