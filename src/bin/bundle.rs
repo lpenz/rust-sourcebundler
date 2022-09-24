@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use rustsourcebundler::Bundler;
 
 #[derive(Parser, Debug)]
-#[clap(version, about)]
+#[command(version, about)]
 pub struct Cli {
     /// The top src/main.rs or src/bin/*.rs file to bundle.
     pub main_rs: PathBuf,
