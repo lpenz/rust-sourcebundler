@@ -96,7 +96,8 @@ impl<'a> Bundler<'a> {
         self._crate_name = cargo
             .package
             .ok_or_else(|| anyhow!("Could not get crate name from {}", cargo_filename.display()))?
-            .name;
+            .name
+            .replace("-", "_");
         self.binrs()?;
         if let Some(bundle_filename) = self.bundle_filename {
             println!("rerun-if-changed={}", bundle_filename.display());

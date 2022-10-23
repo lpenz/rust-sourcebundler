@@ -1,6 +1,6 @@
-extern crate basic;
-use basic::hello_external_world;
-use basic::internal::hello_world;
+extern crate basic_test;
+use basic_test::hello_external_world;
+use basic_test::internal::hello_world;
 
 fn main() {
     hello_world();
