@@ -13,9 +13,9 @@ keywords = ["single-file", "bundle", "merge", "source", "build"]
 [dependencies]
 lazy_static = "1.4.0"
 regex = "1.6.0"
-anyhow = "1.0.65"
-clap = { version = "4.0.7", features = ["derive"] }
-cargo_toml = "0.12.3"
+anyhow = "1.0.66"
+clap = { version = "4.0.18", features = ["derive"] }
+cargo_toml = "0.13.0"
 
 [dev-dependencies]
 goldenfile = "1.4.3"
