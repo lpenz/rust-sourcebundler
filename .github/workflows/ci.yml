@@ -5,10 +5,10 @@ jobs:
   omnilint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3.0.2
-      - uses: docker://lpenz/omnilint:0.5
+      - uses: actions/checkout@v3.3.0
+      - uses: docker://lpenz/omnilint:0.5.1
   rust:
-    uses: lpenz/ghworkflow-rust/.github/workflows/rust.yml@v0.10.0
+    uses: lpenz/ghworkflow-rust/.github/workflows/rust.yml@v0.14.0
     with:
       coveralls: true
       publish_cratesio: true
