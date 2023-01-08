@@ -53,7 +53,7 @@ impl<'a> Bundler<'a> {
     pub fn new(binrs_filename: &'a Path, bundle_filename: &'a Path) -> Bundler<'a> {
         let mut bundler = Self::new_fd(
             binrs_filename,
-            Box::new(BufWriter::new(File::create(&bundle_filename).unwrap())),
+            Box::new(BufWriter::new(File::create(bundle_filename).unwrap())),
         );
         bundler.bundle_filename = Some(bundle_filename);
         bundler
@@ -97,7 +97,7 @@ impl<'a> Bundler<'a> {
             .package
             .ok_or_else(|| anyhow!("Could not get crate name from {}", cargo_filename.display()))?
             .name
-            .replace("-", "_");
+            .replace('-', "_");
         self.binrs()?;
         if let Some(bundle_filename) = self.bundle_filename {
             println!("rerun-if-changed={}", bundle_filename.display());
@@ -187,7 +187,7 @@ impl<'a> Bundler<'a> {
         let mod_fd = mod_filenames0
             .iter()
             .map(|fn0| {
-                let mod_filename = self.basedir.join(&fn0);
+                let mod_filename = self.basedir.join(fn0);
                 File::open(mod_filename)
             })
             .find(|fd| fd.is_ok())
