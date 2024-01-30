@@ -1,6 +1,6 @@
 [package]
 name = "rustsourcebundler"
-version = "0.11.5"
+version = "0.11.6"
 authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
 description = "Bundle the source code of a rust cargo crate in a single source file"
 license = "MIT"
@@ -12,10 +12,10 @@ keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
 lazy_static = "1.4.0"
-regex = "1.10.2"
+regex = "1.10.3"
 anyhow = "1.0.79"
-clap = { version = "4.4.14", features = ["derive"] }
-cargo_toml = "0.18.0"
+clap = { version = "4.4.18", features = ["derive"] }
+cargo_toml = "0.19.1"
 
 [dev-dependencies]
 goldenfile = "1.6.0"
