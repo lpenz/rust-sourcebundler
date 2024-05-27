@@ -92,7 +92,8 @@ impl<'a> Bundler<'a> {
                 })?,
         );
         let cargo_filename = self.basedir.join("Cargo.toml");
-        let cargo = cargo_toml::Manifest::from_path(&cargo_filename)?;
+        let pwd = std::env::current_dir()?;
+        let cargo = cargo_toml::Manifest::from_path(pwd.join(&cargo_filename))?;
         self._crate_name = cargo
             .package
             .ok_or_else(|| anyhow!("Could not get crate name from {}", cargo_filename.display()))?
