@@ -10,7 +10,7 @@ use std::io::BufWriter;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use cargo_toml;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -80,29 +80,47 @@ impl<'a> Bundler<'a> {
     }
 
     fn do_run(&mut self) -> Result<()> {
+        let canon_binrs = self.binrs_filename.canonicalize().with_context(|| {
+            format!(
+                "error canonicalizing binrs dir [{}]",
+                self.binrs_filename.display()
+            )
+        })?;
         self.basedir = PathBuf::from(
-            self.binrs_filename
+            canon_binrs
                 .ancestors()
                 .find(|a| a.join("Cargo.toml").is_file())
                 .ok_or_else(|| {
                     anyhow!(
-                        "could not find Cargo.toml in ancestors of {:?}",
-                        self.binrs_filename
+                        "could not find Cargo.toml in ancestors of [{}]",
+                        canon_binrs.display()
                     )
                 })?,
         );
         let cargo_filename = self.basedir.join("Cargo.toml");
-        let cargo = cargo_toml::Manifest::from_path(&cargo_filename)?;
+        let cargo = cargo_toml::Manifest::from_path(&cargo_filename)
+            .with_context(|| format!("error parsing {}", cargo_filename.display()))?;
         self._crate_name = cargo
             .package
-            .ok_or_else(|| anyhow!("Could not get crate name from {}", cargo_filename.display()))?
+            .ok_or_else(|| {
+                anyhow!(
+                    "Could not get crate name from [{}]",
+                    cargo_filename.display()
+                )
+            })?
             .name
             .replace('-', "_");
-        self.binrs()?;
+        self.binrs()
+            .with_context(|| format!("error building bin.rs {}", self.binrs_filename.display()))?;
         if let Some(bundle_filename) = self.bundle_filename {
             println!("rerun-if-changed={}", bundle_filename.display());
         }
-        self.bundle_file.flush()?;
+        self.bundle_file.flush().with_context(|| {
+            format!(
+                "error while flushing bundle_file {:?}",
+                self.bundle_filename
+            )
+        })?;
         Ok(())
     }
 
@@ -180,7 +198,7 @@ impl<'a> Bundler<'a> {
         mod_import: &str,
         lvl: usize,
     ) -> Result<()> {
-        let mod_filenames0 = vec![
+        let mod_filenames0 = [
             format!("src/{}.rs", mod_path),
             format!("src/{}/mod.rs", mod_path),
         ];
