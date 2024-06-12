@@ -5,7 +5,7 @@ jobs:
   omnilint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.3
+      - uses: actions/checkout@v4.1.7
       - uses: docker://lpenz/omnilint:0.5.2
   rust:
     uses: lpenz/ghworkflow-rust/.github/workflows/rust.yml@v0.23.1
