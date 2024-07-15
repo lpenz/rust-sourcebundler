@@ -19,7 +19,7 @@ const LIBRS_FILENAME: &str = "src/lib.rs";
 lazy_static! {
     static ref COMMENT_RE: Regex = source_line_regex(r" ").unwrap();
     static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*").unwrap();
-    static ref USECRATE_RE: Regex = source_line_regex(r" use  crate::(?P<submod>.*);$").unwrap();
+    static ref USECRATE_RE: Regex = source_line_regex(r" use  crate::(?P<submod>.*)$").unwrap();
     static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
 }
 
@@ -219,19 +219,32 @@ impl<'a> Bundler<'a> {
         writeln!(self.bundle_file, "pub mod {} {{", mod_name)?;
         self.skip_use.insert(String::from(mod_import));
 
+        let mut inner_submod = String::new();
         while mod_reader.read_line(&mut line)? > 0 {
             line.truncate(line.trim_end().len());
             if COMMENT_RE.is_match(&line) || WARN_RE.is_match(&line) {
-            } else if let Some(cap) = USECRATE_RE.captures(&line) {
-                let submodname = cap
-                    .name("submod")
-                    .ok_or_else(|| anyhow!("capture not found"))?
-                    .as_str();
-                write!(self.bundle_file, "use ")?;
-                for _ in 0..lvl {
-                    write!(self.bundle_file, "super::")?;
+            } else if USECRATE_RE.is_match(&line) || !inner_submod.is_empty() {
+                if let Some(cap) = USECRATE_RE.captures(&line) {
+                    write!(self.bundle_file, "use ")?;
+                    for _ in 0..lvl {
+                        write!(self.bundle_file, "super::")?;
+                    }
+                    let submodname = cap
+                        .name("submod")
+                        .ok_or_else(|| anyhow!("capture not found"))?
+                        .as_str();
+                    if submodname.ends_with(';') {
+                        writeln!(self.bundle_file, "{}", submodname)?;
+                    } else {
+                        inner_submod = submodname.to_string();
+                    }
+                } else {
+                    inner_submod.push_str(&line);
+                    if inner_submod.ends_with(';') {
+                        writeln!(self.bundle_file, "{}", inner_submod)?;
+                        inner_submod.clear();
+                    }
                 }
-                writeln!(self.bundle_file, "{};", submodname)?;
             } else if let Some(cap) = mod_re.captures(&line) {
                 let submodname = cap
                     .name("m")
