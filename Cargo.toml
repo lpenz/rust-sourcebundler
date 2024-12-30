@@ -11,12 +11,12 @@ categories = ["command-line-utilities"]
 keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
-regex = "1.10.5"
-anyhow = "1.0.86"
-clap = { version = "4.5.7", features = ["derive"] }
-cargo_toml = "0.20.2"
+regex = "1.11.1"
+anyhow = "1.0.95"
+clap = { version = "4.5.23", features = ["derive"] }
+cargo_toml = "0.21.0"
 
 [dev-dependencies]
-goldenfile = "1.7.1"
-tempfile = "3.10.1"
+goldenfile = "1.7.3"
+tempfile = "3.14.0"
 
