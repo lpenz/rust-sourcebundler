@@ -11,7 +11,6 @@ categories = ["command-line-utilities"]
 keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
-lazy_static = "1.4.0"
 regex = "1.10.5"
 anyhow = "1.0.86"
 clap = { version = "4.5.7", features = ["derive"] }

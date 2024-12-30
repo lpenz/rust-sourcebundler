@@ -9,19 +9,20 @@ use std::io::BufReader;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use anyhow::{anyhow, Context, Result};
 use cargo_toml;
-use lazy_static::lazy_static;
 use regex::Regex;
 
 const LIBRS_FILENAME: &str = "src/lib.rs";
-lazy_static! {
-    static ref COMMENT_RE: Regex = source_line_regex(r" ").unwrap();
-    static ref WARN_RE: Regex = source_line_regex(r" #!\[warn\(.*").unwrap();
-    static ref USECRATE_RE: Regex = source_line_regex(r" use  crate::(?P<submod>.*);$").unwrap();
-    static ref MINIFY_RE: Regex = Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap();
-}
+
+static COMMENT_RE: LazyLock<Regex> = LazyLock::new(|| source_line_regex(r" ").unwrap());
+static WARN_RE: LazyLock<Regex> = LazyLock::new(|| source_line_regex(r" #!\[warn\(.*").unwrap());
+static USECRATE_RE: LazyLock<Regex> =
+    LazyLock::new(|| source_line_regex(r" use  crate::(?P<submod>.*);$").unwrap());
+static MINIFY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*(?P<contents>.*)\s*$").unwrap());
 
 pub struct Bundler<'a> {
     binrs_filename: &'a Path,
