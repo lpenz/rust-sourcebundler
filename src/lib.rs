@@ -2,8 +2,6 @@
 // This file is subject to the terms and conditions defined in
 // file 'LICENSE', which is part of this source code package.
 
-#![warn(rust_2018_idioms)]
-
 //! Bundle the source code of a rust cargo crate in a single source file.
 //!
 //! Very useful for sending the source code to a competitive programming site that
