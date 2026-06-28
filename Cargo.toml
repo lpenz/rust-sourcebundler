@@ -1,6 +1,6 @@
 [package]
 name = "rustsourcebundler"
-version = "0.14.1"
+version = "0.14.2"
 authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
 description = "Bundle the source code of a rust cargo crate in a single source file"
 license = "MIT"
@@ -11,12 +11,12 @@ categories = ["command-line-utilities"]
 keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
-regex = "1.11.1"
-anyhow = "1.0.97"
-clap = { version = "4.5.32", features = ["derive"] }
-cargo_toml = "0.22.1"
+regex = "1.12.4"
+anyhow = "1.0.103"
+clap = { version = "4.6.1", features = ["derive"] }
+cargo_toml = "1.0.0"
 
 [dev-dependencies]
-goldenfile = "1.8.0"
-tempfile = "3.19.0"
+goldenfile = "1.11.0"
+tempfile = "3.27.0"
 
