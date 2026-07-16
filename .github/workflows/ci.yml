@@ -1,12 +1,9 @@
 ---
 name: CI
-on: [ workflow_dispatch, push, pull_request ]
+on: [workflow_dispatch, push, pull_request]  # yamllint disable-line rule:truthy
 jobs:
   omnilint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.0
-      - uses: docker://lpenz/omnilint:0.5.2
+    uses: lpenz/omnilint/.github/workflows/omnilint.yml@v0.5.2
   rust:
     uses: lpenz/ghworkflow-rust/.github/workflows/rust.yml@v0.28.2
     with:
@@ -15,3 +12,12 @@ jobs:
       publish_github_release: true
     secrets:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+  commit-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 0
+      - uses: commit-check/commit-check-action@v2.4.2
+        with:
+          branch: false
