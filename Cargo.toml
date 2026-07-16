@@ -6,14 +6,14 @@ description = "Bundle the source code of a rust cargo crate in a single source f
 license = "MIT"
 homepage = "https://github.com/lpenz/rust-sourcebundler"
 repository = "https://github.com/lpenz/rust-sourcebundler.git"
-edition = "2021"
+edition = "2024"
 categories = ["command-line-utilities"]
 keywords = ["single-file", "bundle", "merge", "source", "build"]
 
 [dependencies]
-regex = "1.12.4"
+regex = "1.13.1"
 anyhow = "1.0.103"
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6.2", features = ["derive"] }
 cargo_toml = "1.0.0"
 
 [dev-dependencies]
